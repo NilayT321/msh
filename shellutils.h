@@ -13,4 +13,6 @@ void resizeWD(char* wd, int* wd_end);
 void updateWD(char** argv, char* wd, int* wd_end);
 char* innermostDir(char* wd);
 
+extern int curr_length;
+
 #endif

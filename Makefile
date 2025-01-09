@@ -1,9 +1,10 @@
 OUTPUT = msh
 CC = gcc
 CFLAGS = -g -Wall -fsanitize=address -std=c99 
-LFLAGS = -lm 
+LFLAGS = -lm
 
-$(OUTPUT): %.c %.h  
+
+$(OUTPUT): $(OUTPUT).c devutils.c shellutils.c
 	$(CC) $(CFLAGS) -o $(OUTPUT) *.c $(LFLAGS) 
 
 all: $(OUTPUT) 
