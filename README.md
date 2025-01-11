@@ -14,10 +14,10 @@ At present, the core functionality of `msh` works as intended and can be used to
 $ make
 ```
 
-should compile the program. It can then be run using 
+should compile the program and will place it in the `bin/` directory. It can then be run using 
 
 ```bash 
-$ ./msh 
+$ bin/msh 
 ```
 
 Again, the shell is still not complete and bugs are definitely present. 

@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "devutils.h"
+#include "../include/devutils.h"
 
 
 void printArray(char** arr, int size) {

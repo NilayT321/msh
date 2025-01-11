@@ -6,8 +6,8 @@
 #include <signal.h>
 #include <string.h>
 #include <stdbool.h>
-#include "devutils.h"
-#include "shellutils.h"
+#include "../include/devutils.h"
+#include "../include/shellutils.h"
 
 int curr_length;
 
@@ -24,7 +24,7 @@ int main() {
 		// Main loop 
 		while (1) {
 				
-				printf("msh %s > ", innermostDir(wd));
+				printf("msh@%s> ", innermostDir(wd));
 
 				char cmdtext[MAXLEN];
 				fgets(cmdtext, MAXLEN, stdin);

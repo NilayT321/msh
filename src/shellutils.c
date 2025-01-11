@@ -6,7 +6,7 @@
 #include <signal.h>
 #include <string.h>
 #include <stdbool.h>
-#include "shellutils.h" 
+#include "../include/shellutils.h" 
 
 void parseLine(char* cmd, char** argv, int* argc) {
 		

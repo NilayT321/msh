@@ -1,13 +1,24 @@
-OUTPUT = msh
-CC = gcc
-CFLAGS = -g -Wall -fsanitize=address -std=c99 
-LFLAGS = -lm
+INC_DIR := include
+SRC_DIR := src 
+BIN_DIR := bin
 
+OUTPUT := msh
+EXE := $(BIN_DIR)/$(OUTPUT)
+CC := gcc
+CPPFLAGS := -I$(INC_DIR)
+CFLAGS := -g -Wall -fsanitize=address -std=c99 
+LFLAGS := -lm
 
-$(OUTPUT): $(OUTPUT).c devutils.c shellutils.c
-	$(CC) $(CFLAGS) -o $(OUTPUT) *.c $(LFLAGS) 
+SRC := $(wildcard src/*.c)
+INC := $(wildcard $(INC_DIR)/*.h)
+
+$(EXE): $(SRC) $(INC) | $(BIN_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -o $(EXE) $(SRC) $(LFLAGS) 
+
+$(BIN_DIR) :
+	mkdir $(BIN_DIR)
 
 all: $(OUTPUT) 
 
 clean: 
-	rm -f *.o $(OUTPUT)
+	rm -f *.o $(EXE)
