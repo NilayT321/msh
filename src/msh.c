@@ -8,8 +8,12 @@
 #include <stdbool.h>
 #include "../include/devutils.h"
 #include "../include/shellutils.h"
+#include "../include/sighandling.h"
+#include "../include/dirnavigating.h"
 
 int curr_length;
+
+volatile sig_atomic_t sig_int_flag = 0;
 
 int main() {
 		
