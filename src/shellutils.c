@@ -5,8 +5,10 @@
 #include <sys/types.h> 
 #include <string.h>
 #include <stdbool.h>
+#include "../include/sighandling.h"
 #include "../include/shellutils.h" 
 #include "../include/dirnavigating.h"
+ 
 
 void parseLine(char* cmd, char** argv, int* argc) {
 		
@@ -67,17 +69,23 @@ void eval(char* cmd, char** argv, int argc, char* wd, int* wd_end) {
 		}
 
 		// Create a new process 
-		pid_t child;
+		pid_t child = fork();
 		int status; 
-
-		if ((child = fork()) < 0) {
+		
+		if (child < 0) {
 				perror("fork error\n");
 				exit(EXIT_FAILURE);
 		} else if (child == 0) {
 				// Change the process to a new process group 
 				// That way, we can handle child processes accordingly
 				setpgid(0,0);
+				
+				// Set the SIGINT signal to its default behavior 
+				signal(SIGINT, SIG_DFL);
 
+				foreground_pid = getpid();
+
+				printf("Running PID %d\n", foreground_pid);
 				if (execvp(argv[0], argv) < 0) {
 						perror("msh");
 				}
@@ -99,5 +107,3 @@ char* innermostDir(char* wd) {
 				return last + 1;
 		}
 }
-
-

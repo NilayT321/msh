@@ -1,4 +1,5 @@
 #ifndef DIRNAVIGATING_H
+#define DIRNAVIGATING_H
 
 
 void gotoHome(char* wd, int* wd_end);

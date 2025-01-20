@@ -13,10 +13,16 @@
 
 int curr_length;
 
-volatile sig_atomic_t sig_int_flag = 0;
+// PID of the currently running process
 
 int main() {
 		
+		// Need to keep track of what process is currently running 
+		// So that we can send signals to them
+
+		// Load signal handlers
+		signal(SIGINT, sigint_handler);
+
 		// Working directory
 		curr_length = 512;
 		char* wd = calloc(512, sizeof(char));
@@ -36,7 +42,7 @@ int main() {
 				if (feof(stdin)) {
 						break;
 				}
-
+				
 				// The arguments array 
 				char** argv = calloc(MAXARGS, sizeof(char*));
 				for (int i = 0; i < MAXARGS; i++) {

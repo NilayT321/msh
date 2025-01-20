@@ -1,4 +1,7 @@
+#include <stdlib.h>
+
 #ifndef SHELLUTILS_H 
+#define SHELLUTILS_H
 
 #define MAXARGS 128			// Max number of arguments allowed
 #define MAXLEN 512			// Max length of command 

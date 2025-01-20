@@ -6,7 +6,7 @@ OUTPUT := msh
 EXE := $(BIN_DIR)/$(OUTPUT)
 CC := gcc
 CPPFLAGS := -I$(INC_DIR)
-CFLAGS := -g -Wall -fsanitize=address -std=c99 
+CFLAGS := -g -Wall -fsanitize=address -std=c99 -D_POSIX_C_SOURCE
 LFLAGS := -lm
 
 SRC := $(wildcard src/*.c)
