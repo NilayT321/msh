@@ -8,20 +8,24 @@
 #include <stdbool.h>
 #include "../include/devutils.h"
 #include "../include/shellutils.h"
-#include "../include/sighandling.h"
 #include "../include/dirnavigating.h"
+#include "../include/jobcontrol.h"
 
 int curr_length;
 
-// PID of the currently running process
+job_t jobs[MAXJOBS];									// Jobs array
+int nextJID = 0;										// Next available JID
+
+sigset_t mask, prev_mask, all_mask;						// Signal masks
 
 int main() {
-		
-		// Need to keep track of what process is currently running 
-		// So that we can send signals to them
+
+		// Set signal masks
 
 		// Load signal handlers
-		signal(SIGINT, sigint_handler);
+
+		// Initialize the list of jobs 
+		initjobList();
 
 		// Working directory
 		curr_length = 512;
@@ -35,7 +39,7 @@ int main() {
 		while (1) {
 				
 				printf("msh@%s> ", innermostDir(wd));
-
+				
 				char cmdtext[MAXLEN];
 				fgets(cmdtext, MAXLEN, stdin);
 				
@@ -51,11 +55,11 @@ int main() {
 
 				int argc = 0;
 
-				parseLine(cmdtext, argv, &argc);
+				int bg = parseLine(cmdtext, argv, &argc);
 
 				// Evaluate
-				eval(cmdtext, argv, argc, wd, &wd_end);
-				
+				eval(cmdtext, argv, argc, wd, &wd_end, bg);
+
 				for (int i = 0; i < argc; i++) {
 						free(argv[i]);
 				}

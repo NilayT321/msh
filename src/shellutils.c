@@ -1,27 +1,29 @@
 #include <stdio.h>
+#include <ctype.h>
 #include <stdlib.h>
 #include <unistd.h> 
 #include <sys/wait.h> 
 #include <sys/types.h> 
 #include <string.h>
 #include <stdbool.h>
-#include "../include/sighandling.h"
 #include "../include/shellutils.h" 
 #include "../include/dirnavigating.h"
+#include "../include/jobcontrol.h"
  
-
-void parseLine(char* cmd, char** argv, int* argc) {
+int parseLine(char* cmd, char** argv, int* argc) {
 		
 		int numArgs = 0;
-		
-		// Remove trailing spaces 
-		while (*cmd == ' ')
+		int bg; 						// This is 0 if the job is run in the foreground; 1 otherwise
+												// Commands that end in '&' will be run in the background.
+
+		// Remove leading spaces 
+		while (*cmd == ' ') 
 				cmd++;
 
 		while (cmd != NULL) {
 
 				char* space = strchr(cmd, ' ');
-				
+
 				if (space == NULL) {
 						// End of string
 						strncpy(argv[numArgs], cmd, strlen(cmd));
@@ -43,23 +45,47 @@ void parseLine(char* cmd, char** argv, int* argc) {
 		}
 		
 		numArgs++;
+
 		free(argv[numArgs]);
 		argv[numArgs] = NULL;
-		*argc = numArgs;
 
 		// Free blocks after numArgs 
 		for (int i = numArgs + 1; i < MAXARGS; i++)
 				free(argv[i]);
+
+		// Is the last member of the list empty due to trailing whitespace? 
+		// If so, remove that member too 
+		if (argv[numArgs-1][0] == '\0') {
+				free(argv[numArgs-1]);
+				argv[numArgs-1] = NULL;
+				numArgs--;
+		}
+
+		// printf("There are %d arguments\n", numArgs);
+		
+		// If the last member of the list is an '&', we run the job in the background 
+		if (argv[numArgs-1][0] == '&' && strlen(argv[numArgs-1]) == 1) {
+				free(argv[numArgs-1]);
+				argv[numArgs-1] = NULL;
+				numArgs--;
+				bg = 1;
+		} else {
+				bg = 0;
+		}
+
+		*argc = numArgs;
+
+		return bg;
 }
 
-void eval(char* cmd, char** argv, int argc, char* wd, int* wd_end) {
-		
+void eval(char* cmd, char** argv, int argc, char* wd, int* wd_end, int bg) {
+
 		// Empty line is ignored 
 		if (argc == 1 && strcmp(argv[0], "") == 0)
 				return;
 
 		// Builtin commands
-		if (strcmp(cmd, "quit") == 0)
+		if (strcmp(cmd, "exit") == 0)
 				exit(0);
 		
 		// Change directory command
@@ -68,7 +94,13 @@ void eval(char* cmd, char** argv, int argc, char* wd, int* wd_end) {
 				return;
 		}
 
-		// Create a new process 
+		// jobs command 
+		if (strcmp(argv[0], "jobs") == 0) {
+				printJobs();
+				return;
+		}
+
+		// Block SIGCHLD before forking to ensure that the jobs are added correctly
 		pid_t child = fork();
 		int status; 
 		
@@ -79,19 +111,23 @@ void eval(char* cmd, char** argv, int argc, char* wd, int* wd_end) {
 				// Change the process to a new process group 
 				// That way, we can handle child processes accordingly
 				setpgid(0,0);
-				
-				// Set the SIGINT signal to its default behavior 
-				signal(SIGINT, SIG_DFL);
 
-				foreground_pid = getpid();
-
-				printf("Running PID %d\n", foreground_pid);
 				if (execvp(argv[0], argv) < 0) {
 						perror("msh");
 				}
 				
 		} else {
-				waitpid(child, &status, 0);
+				
+				if (bg == 0) {
+						addjob(child, JOB_FG, cmd); 			// Foreground job
+				} else {
+						addjob(child, JOB_BG, cmd);			// Background job 
+				}
+
+				// If foregound job, then wait for child 
+				if (bg == 0) {
+						wait(&status);
+				}
 		}
 }
 
