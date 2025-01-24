@@ -10,6 +10,7 @@
 #include "../include/shellutils.h"
 #include "../include/dirnavigating.h"
 #include "../include/jobcontrol.h"
+#include "../include/sighandling.h"
 
 int curr_length;
 
@@ -23,6 +24,7 @@ int main() {
 		// Set signal masks
 
 		// Load signal handlers
+		signal(SIGCHLD, sigchld_handler);
 
 		// Initialize the list of jobs 
 		initjobList();
@@ -44,6 +46,7 @@ int main() {
 				fgets(cmdtext, MAXLEN, stdin);
 				
 				if (feof(stdin)) {
+						printf("\n");
 						break;
 				}
 				

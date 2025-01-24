@@ -11,10 +11,11 @@
 
 int parseLine(char* cmd, char** argv, int* argc);
 void eval(char* cmd, char** argv, int argc, char* wd, int* wd_end, int bg);
+int builtins(char* cmd, char** argv, int argc, char* wd, int* wd_end);
 char* innermostDir(char* wd);
 
 extern int curr_length;
 
-extern sigset_t mask, prev_mask, all_mask;		// Signal masks
+extern sig_atomic_t pid; 				// Foreground job PID; use when waiting for a child process to complete
 
 #endif
