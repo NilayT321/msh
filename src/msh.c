@@ -10,21 +10,17 @@
 #include "../include/shellutils.h"
 #include "../include/dirnavigating.h"
 #include "../include/jobcontrol.h"
-#include "../include/sighandling.h"
 
 int curr_length;
 
 job_t jobs[MAXJOBS];									// Jobs array
-int nextJID = 0;										// Next available JID
-
-sigset_t mask, prev_mask, all_mask;						// Signal masks
+int nextJID = 1;										// Next available JID
 
 int main() {
 
 		// Set signal masks
 
 		// Load signal handlers
-		signal(SIGCHLD, sigchld_handler);
 
 		// Initialize the list of jobs 
 		initjobList();

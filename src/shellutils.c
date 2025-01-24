@@ -9,7 +9,6 @@
 #include "../include/shellutils.h" 
 #include "../include/dirnavigating.h"
 #include "../include/jobcontrol.h"
-#include "../include/sighandling.h"
 
 pid_t pid;					// Global PID for the foreground job
  
@@ -105,11 +104,11 @@ void eval(char* cmd, char** argv, int argc, char* wd, int* wd_end, int bg) {
 		// 		otherwise, there is a potential race condition 
 		// 3) After adding to job list, parent should wait for the child to finish
 
-		// Block SIGCHLD to prevent race conditions 
-		sigprocmask(SIG_BLOCK, &sigchld_mask, &prev_mask);
 
 		if (bg == 0) {
 				
+				// Block SIGCHLD to prevent race conditions 
+
 				pid_t child = fork();
 
 				if (child < 0) {
@@ -119,7 +118,10 @@ void eval(char* cmd, char** argv, int argc, char* wd, int* wd_end, int bg) {
 						// CHILD: must do these things 
 						// Child inherits blocked signals from parent
 						// Unblock all signals before executing
-						sigprocmask(SIG_SETMASK, &prev_mask, NULL);
+
+						// Put the child in its own process group 
+						// That way, it doesn't interfere with our shell when we do signal stuff
+						setpgid(0, 0);
 
 						if (execvp(argv[0], argv) < 0) {
 								printf("%s: %s\n", argv[0], strerror(errno));
@@ -130,20 +132,13 @@ void eval(char* cmd, char** argv, int argc, char* wd, int* wd_end, int bg) {
 						// Add to job list
 						addjob(child, JOB_BG, cmd);
 
-						// wait(NULL);
-						pid = 0;
-						while (pid == 0) {
-								sigsuspend(&prev_mask);
-						}
+						wait(NULL);
 
-						// Unblock SIGCHLD
-						sigprocmask(SIG_SETMASK, &prev_mask, NULL);
 				}
 		} else {
 				
 				// Background job 
 				// Block SIGCHLD again 
-				sigprocmask(SIG_BLOCK, &sigchld_mask, &prev_mask);
 				pid_t child = fork();
 
 				if (child < 0) {
