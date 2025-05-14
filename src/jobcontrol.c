@@ -92,3 +92,68 @@ void initjobList() {
 		for (int i = 0; i < MAXJOBS; i++) 
 				clearjob(&jobs[i]);
 }
+
+/*
+ * Finds the job with the specified PID 
+ * @return A pointer to the job with PID = pid; NULL if not found.
+ */
+job_t* getJob(pid_t pid) {
+		
+		for (int i = 0; i < MAXJOBS; i++) {
+				if (jobs[i].pid == pid) 
+						return &jobs[i];
+		}
+
+		return NULL;
+}
+
+
+
+/*
+ * Finds the job with the specified JID 
+ * @return A pointer to the job with JID = jid; NULL if not found 
+ */
+job_t* getJobJID(int jid) {
+		
+		for (int i = 0; i < MAXJOBS; i++) {
+				if (jobs[i].jid == jid) 
+						return &jobs[i];
+		}
+
+		return NULL;
+}
+
+/* 
+ * Takes a job and moves it to the background
+ * We pass in either a JID or PID; the one is determined by the which argument
+ * @return Nothing
+ */
+void fgJob(int id, int which) {
+		
+		job_t* curr_job;
+		pid_t curr_pid;
+
+		if (which == 0) {									// 0 = we have a JID
+				
+				printf("Argument is %d\n", id);
+				curr_job = getJobJID(id);
+				curr_job->state = JOB_BG;
+				curr_pid = curr_job->pid;
+
+				// Send a SIGCONT 
+				kill(-curr_pid, SIGCONT);
+				
+		} else if (which == 1) {					// 1 = we have a PID
+				
+				printf("Argument is %d\n", id);
+				curr_job = getJob(id);
+				curr_job->state = JOB_BG;
+				curr_pid = id;
+
+				kill(-curr_pid, SIGCONT);
+				
+		} else {
+				fprintf(stderr, "Error moving job\n");
+				return;
+		}
+}

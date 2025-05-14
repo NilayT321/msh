@@ -10,13 +10,18 @@
 #include "../include/dirnavigating.h"
 #include "../include/jobcontrol.h"
 
-pid_t pid;					// Global PID for the foreground job
+volatile sig_atomic_t pid;					// Global PID for the foreground job
  
+
 int parseLine(char* cmd, char** argv, int* argc) {
 		
 		int numArgs = 0;
-		int bg; 						// This is 0 if the job is run in the foreground; 1 otherwise
+		int bg; 						// This is 0 if the job is run in the foreground; 1 for background; -1 on error
 												// Commands that end in '&' will be run in the background.
+		
+		// Ignore empty strings 
+		if (cmd[0] == '\0')
+				return -1;
 
 		// Remove leading spaces 
 		while (*cmd == ' ') 
@@ -51,10 +56,6 @@ int parseLine(char* cmd, char** argv, int* argc) {
 		free(argv[numArgs]);
 		argv[numArgs] = NULL;
 
-		// Free blocks after numArgs 
-		for (int i = numArgs + 1; i < MAXARGS; i++)
-				free(argv[i]);
-
 		// Is the last member of the list empty due to trailing whitespace? 
 		// If so, remove that member too 
 		if (argv[numArgs-1][0] == '\0') {
@@ -81,48 +82,37 @@ int parseLine(char* cmd, char** argv, int* argc) {
 
 void eval(char* cmd, char** argv, int argc, char* wd, int* wd_end, int bg) {
 
-		sigset_t prev_mask, sigchld_mask, all_mask;
-
-		sigemptyset(&prev_mask); 										// prev_mask blocks no signals
+		sigset_t prev_mask, sigchld_mask, mask_all;						// signal masks, prev_mask should block nothing
+		
+		sigfillset(&mask_all);											// mask_all blocks everything
 		sigemptyset(&sigchld_mask);
 		sigaddset(&sigchld_mask, SIGCHLD);					// sigchld_mask blocks SIGCHLD only
-		sigfillset(&all_mask);											// all_mask blocks everything
 
 		// Empty line is ignored 
-		if (argc == 1 && strcmp(argv[0], "") == 0)
-				return;
-
-		// Builtin commands 
-		int is_builtin = builtins(cmd, argv, argc, wd, wd_end);
-		if (is_builtin == 1)
+		if ((argc == 1 && strcmp(argv[0], "") == 0) || bg == -1)
 				return;
 		
-		// Foregorund job steps: 
-		// 1) Fork the process. 
-		// 2) Parent should add the child to the job list 
-		// 		NOTE: we need to block SIGCHLD for this 
-		// 		otherwise, there is a potential race condition 
-		// 3) After adding to job list, parent should wait for the child to finish
-
+		// Builtin commands
+		if (builtins(cmd, argv, argc, wd, wd_end) == 1)
+				return;
 
 		if (bg == 0) {
 				
 				// Block SIGCHLD to prevent race conditions 
-
+				sigprocmask(SIG_BLOCK, &sigchld_mask, &prev_mask);
 				pid_t child = fork();
 
 				if (child < 0) {
 						perror("fork");
 						exit(1);
 				} else if (child == 0) {
-						// CHILD: must do these things 
-						// Child inherits blocked signals from parent
 						// Unblock all signals before executing
+						sigprocmask(SIG_SETMASK, &prev_mask, NULL);
 
 						// Put the child in its own process group 
 						// That way, it doesn't interfere with our shell when we do signal stuff
 						setpgid(0, 0);
-
+						
 						if (execvp(argv[0], argv) < 0) {
 								printf("%s: %s\n", argv[0], strerror(errno));
 								return;
@@ -130,9 +120,17 @@ void eval(char* cmd, char** argv, int argc, char* wd, int* wd_end, int bg) {
 				} else {
 						// PARENT
 						// Add to job list
-						addjob(child, JOB_BG, cmd);
+						// First block all signals 
+						sigprocmask(SIG_BLOCK, &mask_all, NULL);
+						addjob(child, JOB_FG, cmd);
 
-						wait(NULL);
+						// Wait for a signal 
+						pid = 0;
+						while(pid == 0) 
+								sigsuspend(&prev_mask);
+
+						// Unblock signals 
+						sigprocmask(SIG_SETMASK, &prev_mask, NULL);
 
 				}
 		} else {
@@ -145,10 +143,31 @@ void eval(char* cmd, char** argv, int argc, char* wd, int* wd_end, int bg) {
 						perror("fork");
 						exit(1);
 				} else if (child == 0) {
+						// Unblock signals 
+						sigprocmask(SIG_SETMASK, &prev_mask, NULL);
 
+						setpgid(0, 0); 			
+
+						if (execvp(argv[0], argv) < 0) {
+								printf("%s: %s\n", argv[0], strerror(errno));
+								return;
+						}
 				} else {
 						// PARENT
+						// Add to job list
+						// Block signals to prevent race conditions
+						sigprocmask(SIG_BLOCK, &mask_all, NULL);
+						addjob(child, JOB_BG, cmd);
+						
+						// Unblock signals 
+						sigprocmask(SIG_SETMASK, &prev_mask, NULL);
+
+						// Print a message 
+						job_t* currBGJob = getJob(child);
+						printf("[%d] %d\n", currBGJob->jid, currBGJob->pid);
+
 				}
+
 		}
 }
 
@@ -173,6 +192,30 @@ int builtins(char* cmd, char** argv, int argc, char* wd, int* wd_end) {
 		if (strcmp(argv[0], "jobs") == 0) {
 				printJobs();
 				return 1;
+		}
+
+		// fg 
+		if (strcmp(argv[0], "fg") == 0) {
+				
+				// Get the second argument
+				char* secondArg = argv[1];
+				int which;
+
+				if (secondArg != NULL && secondArg[0] == '%') {
+						
+						which = 0;
+
+						// The JID starts after the '%' sign 
+						char* jid_str = secondArg + 1;
+						int id = atoi(jid_str);
+
+						fgJob(id, which);
+				} else {
+						which = 1; 
+						int id = atoi(secondArg);
+
+						fgJob(id, which);
+				}
 		}
 
 		return 0;

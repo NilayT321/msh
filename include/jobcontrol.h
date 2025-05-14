@@ -22,7 +22,7 @@ typedef struct {
 } job_t;
 
 extern job_t jobs[MAXJOBS];
-extern int nextJID;					// Next available JID
+extern volatile int nextJID;					// Next available JID
 
 // Modify the jobs array 
 void addjob(pid_t pid, int state, char* cmdtext);
@@ -30,5 +30,13 @@ void printJobs();
 void clearjob(job_t* job);
 void deljob(pid_t pid);
 void initjobList();
+
+// Search through jobs array
+job_t* getJob(pid_t pid);
+job_t* getJobJID(int jid);
+
+// Change job state
+void bgJob(int id, int which);
+void fgJob(int id, int which);
 
 #endif

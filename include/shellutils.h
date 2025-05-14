@@ -16,6 +16,6 @@ char* innermostDir(char* wd);
 
 extern int curr_length;
 
-extern sig_atomic_t pid; 				// Foreground job PID; use when waiting for a child process to complete
+extern volatile sig_atomic_t pid; 				// Foreground job PID; use when waiting for a child process to complete
 
 #endif

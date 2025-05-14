@@ -10,17 +10,21 @@
 #include "../include/shellutils.h"
 #include "../include/dirnavigating.h"
 #include "../include/jobcontrol.h"
+#include "../include/sighandling.h"
 
 int curr_length;
 
 job_t jobs[MAXJOBS];									// Jobs array
-int nextJID = 1;										// Next available JID
+volatile int nextJID = 1;											// Next available JID
 
 int main() {
 
 		// Set signal masks
 
 		// Load signal handlers
+		install_signal(SIGCHLD, sigchld_handler);
+		install_signal(SIGINT, sigint_handler);
+		install_signal(SIGTSTP, sigtstp_handler);
 
 		// Initialize the list of jobs 
 		initjobList();
@@ -59,7 +63,7 @@ int main() {
 				// Evaluate
 				eval(cmdtext, argv, argc, wd, &wd_end, bg);
 
-				for (int i = 0; i < argc; i++) {
+				for (int i = 0; i < MAXARGS; i++) {
 						free(argv[i]);
 				}
 				free(argv);
